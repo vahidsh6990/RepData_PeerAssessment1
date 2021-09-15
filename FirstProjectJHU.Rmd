@@ -1,0 +1,111 @@
+---
+title: "First Project Reproducible Research"
+author: "Vahid Shadram"
+date: "9/15/2021"
+output: html_document
+---
+
+First I load the data
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(knitr)
+df<-read.csv("activity.csv")
+head(df)
+str(df)
+df$date <- as.factor(df$date)
+str(df)
+```
+
+## New data
+Now it is time to have the new data:
+
+```{r, echo=TRUE}
+df1 <- na.omit(df)
+sum(is.na(df1))
+str(df1)
+```
+
+## What is mean total number of steps taken per day?
+
+```{r, echo=TRUE}
+by_day <- group_by(df1, date)
+by_day <- summarize(by_day, steps=sum(steps))
+summary(by_day)
+```
+
+## Make a histogram of the total number of steps taken each day
+
+```{r, echo=TRUE}
+qplot(steps, data = by_day)
+```
+
+
+## Mean and Median
+
+```{r, echo=TRUE}
+mean(by_day$steps)
+median(by_day$steps)
+```
+
+## Time series
+```{r, echo=TRUE}
+by_day_average <- group_by(df1, interval)
+by_day_average <- summarize(by_day_average, steps=mean(steps))
+ggplot(data = by_day_average, mapping=aes(interval,steps)) +
+  geom_line()
+```
+
+## maximum
+```{r, echo=TRUE}
+by_day_average[by_day_average$steps==max(by_day_average$steps),]
+```
+
+
+## Imputing missing values and histogram
+```{r, echo=TRUE}
+sum(is.na(df))
+sum(is.na(df$date))
+sum(is.na(df$steps))
+sum(is.na(df$interval))
+mean_steps <- mean(df$steps, na.rm = TRUE)
+mean_steps
+df$steps[is.na(df$steps)] <- mean_steps
+sum(is.na(df$steps))
+str(df)
+summary(df)
+sum(is.na(df))
+df_new_imputed <- df
+sum(is.na(df_new_imputed))
+by_day_new <- group_by(df_new_imputed, date)
+by_day_new <- summarize(by_day_new, steps=sum(steps))
+summary(by_day_new)
+qplot(steps, data = by_day_new)
+```
+
+
+## weekends and weekdays
+```{r, echo=TRUE}
+df_new_imputed$dayofweek <- weekdays(as.Date(df_new_imputed$date))
+df_new_imputed$weekend <- as.factor(df_new_imputed$dayofweek=="Saturday"|df_new_imputed$dayofweek=="Sunday")
+levels(df_new_imputed$weekend) <- c("Weekday", "Weekend")
+```
+
+
+
+##Time series
+```{r, echo=TRUE}
+df_new_imputed.weekday <- df_new_imputed[df_new_imputed$weekend=="Weekday",]
+df_new_imputed.weekend <- df_new_imputed[df_new_imputed$weekend=="Weekend",]
+df_new_imputed.int.weekday <- group_by(df_new_imputed.weekday, interval)
+df_new_imputed.int.weekday <- summarize(df_new_imputed.int.weekday, steps=mean(steps))
+df_new_imputed.int.weekday$weekend <- "Weekday"
+df_new_imputed.int.weekend <- group_by(df_new_imputed.weekend, interval)
+df_new_imputed.int.weekend <- summarize(df_new_imputed.int.weekend, steps=mean(steps))
+df_new_imputed.int.weekend$weekend <- "Weekend"
+df_new_imputed.int <- rbind(df_new_imputed.int.weekday, df_new_imputed.int.weekend)
+df_new_imputed.int$weekend <- as.factor(df_new_imputed.int$weekend)
+ggplot(df_new_imputed.int, aes(interval, steps)) + geom_line() + 
+  facet_grid(. ~ weekend)
+```
